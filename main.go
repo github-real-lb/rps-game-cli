@@ -8,10 +8,16 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/eiannone/keyboard"
 )
+
+// stats is a struct to record player's stat during the game.
+type stats struct {
+	won  int
+	lost int
+	draw int
+}
 
 // RPS is a map of game's draw options and their int values.
 var RPS = map[int]string{
@@ -22,26 +28,42 @@ var RPS = map[int]string{
 	5: "Spock",
 }
 
+const statsFileName = "stats.txt"
+
+var s = stats{0, 0, 0}
+
 func main() {
+	s.loadFromFile()
+
+	defer func() {
+		s.saveToFile()
+	}()
+
 	for {
-		welcomeScreen()
-		playerDraw := getPlayerDraw()
-		computerDraw := getComputerDraw()
+		menuLoad()
+		ch := getPlayerChoice()
 
-		fmt.Println()
-		fmt.Println()
-		fmt.Printf("You chose %v.\n", RPS[playerDraw])
-		fmt.Printf("Computer chose %v.\n", RPS[computerDraw])
-		fmt.Println()
+		switch ch {
+		case 'e', 'E':
+			s.saveToFile()
+			os.Exit(0)
+		case 's', 'S':
+			showStats()
+		case 'r', 'R':
+			resetStats()
+		default:
+			i, err := strconv.Atoi(string(ch))
 
-		if playerDraw == computerDraw {
-			fmt.Println("It's a draw.")
-		} else if didPlayerWon(playerDraw, computerDraw) {
-			fmt.Println("You've won!")
-		} else {
-			fmt.Println("You've lost!")
+			// player press a key which is not in the menu.
+			if err != nil || i < 1 || i > 5 {
+				fmt.Println()
+				fmt.Println("Please choose one of the options in the main menu!")
+			} else {
+				playGame(i)
+			}
+
 		}
-		time.Sleep(time.Second * 6)
+		pause()
 	}
 }
 
@@ -60,8 +82,7 @@ func clearScreen() {
 	}
 }
 
-// welcomeScreen prints welcome message and the game's draw options menu.
-func welcomeScreen() {
+func menuLoad() {
 	clearScreen()
 
 	fmt.Println("Welcome to the game Rock, Paper, Scissor, Lizard & Spock")
@@ -69,34 +90,45 @@ func welcomeScreen() {
 	for i := 1; i <= len(RPS); i++ {
 		fmt.Println(i, RPS[i])
 	}
-	fmt.Println("\n0 Exit")
+	fmt.Println()
+	fmt.Println("s Show stats")
+	fmt.Println("r Reset stats")
+	fmt.Println("e Exit")
+	fmt.Println()
+	fmt.Print("-> ")
 }
 
-// getPlayerDraw gets player draw and returns it's value.
-func getPlayerDraw() int {
-	for {
-		fmt.Print("-> ")
+// getPlayerChoice gets a single key press and returns it.
+func getPlayerChoice() rune {
+	ch, _, err := keyboard.GetSingleKey()
+	if err != nil {
+		panic(err)
+	}
 
-		ch, _, err := keyboard.GetSingleKey()
-		if err != nil {
-			panic(err)
-		}
+	fmt.Print(string(ch))
 
-		fmt.Print(string(ch))
+	return ch
+}
 
-		i, err := strconv.Atoi(string(ch))
+// playGame receives player's draw (between 1 to 5), then gets computer's draw and prompts who won.
+func playGame(playerDraw int) {
+	computerDraw := getComputerDraw()
 
-		if i == 0 {
-			os.Exit(0)
-		}
+	fmt.Println()
+	fmt.Println()
+	fmt.Printf("You chose %v.\n", RPS[playerDraw])
+	fmt.Printf("Computer chose %v.\n", RPS[computerDraw])
+	fmt.Println()
 
-		if err == nil && (i >= 1 && i <= 5) {
-			return i
-		}
-
-		fmt.Println()
-		fmt.Println("Please press a number between 1 and 5 to indicate your preferred option, or press 0 to exit!")
-		fmt.Println()
+	if playerDraw == computerDraw {
+		s.draw++
+		fmt.Println("It's a draw.")
+	} else if didPlayerWon(playerDraw, computerDraw) {
+		s.won++
+		fmt.Println("You've won!")
+	} else {
+		s.lost++
+		fmt.Println("You've lost!")
 	}
 }
 
@@ -125,4 +157,64 @@ func didPlayerWon(playerDraw, computerDraw int) bool {
 			return false
 		}
 	}
+}
+
+// showStats display the player's statistics of wins, loses and draws.
+func showStats() {
+	t := s.won + s.lost + s.draw
+
+	fmt.Println()
+	fmt.Println()
+	fmt.Println("Your Stats are:")
+	fmt.Printf("You've won %d times (%.1f%%).\n", s.won, float64(s.won)/float64(t)*100)
+	fmt.Printf("You've lost %d times (%.1f%%).\n", s.lost, float64(s.lost)/float64(t)*100)
+	fmt.Printf("You've draw %d times (%.1f%%).\n", s.draw, float64(s.draw)/float64(t)*100)
+}
+
+// resetStats reset player's stats to 0
+func resetStats() {
+	fmt.Println()
+	fmt.Println()
+	fmt.Println("You are about to reset your stats!")
+	fmt.Println("Are you sure (y/n)? ")
+
+	ch := getPlayerChoice()
+
+	fmt.Println()
+	if ch == 'y' || ch == 'Y' {
+		fmt.Println("Reseting stats...")
+		s = stats{0, 0, 0}
+	} else {
+		fmt.Println("Action canceled. Stats are kept.")
+	}
+}
+
+// saveStats save the players stats to a file.
+func (s *stats) saveToFile() {
+	str := fmt.Sprintf("%d,%d,%d", s.won, s.lost, s.draw)
+	err := os.WriteFile(statsFileName, []byte(str), 0666)
+
+	if err != nil {
+		fmt.Println()
+		fmt.Println()
+		fmt.Println("Cannot save game! Error:", err)
+	}
+}
+
+// loadStats load the players stats from a file.
+func (s *stats) loadFromFile() {
+	if bs, err := os.ReadFile(statsFileName); err == nil {
+		if ss := strings.Split(string(bs), ","); len(ss) == 3 {
+			s.won, _ = strconv.Atoi(ss[0])
+			s.lost, _ = strconv.Atoi(ss[1])
+			s.draw, _ = strconv.Atoi(ss[2])
+		}
+	}
+}
+
+// pause waits for a key press before continue with game.
+func pause() {
+	fmt.Println()
+	fmt.Println("Press any key to continue...")
+	keyboard.GetSingleKey()
 }
