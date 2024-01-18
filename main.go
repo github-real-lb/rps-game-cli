@@ -33,10 +33,10 @@ const statsFileName = "stats.txt"
 var s = stats{0, 0, 0}
 
 func main() {
-	s.loadFromFile()
+	s.loadFromFile(statsFileName)
 
 	defer func() {
-		s.saveToFile()
+		s.saveToFile(statsFileName)
 	}()
 
 	for {
@@ -45,7 +45,7 @@ func main() {
 
 		switch ch {
 		case 'e', 'E':
-			s.saveToFile()
+			s.saveToFile(statsFileName)
 			os.Exit(0)
 		case 's', 'S':
 			showStats()
@@ -190,9 +190,9 @@ func resetStats() {
 }
 
 // saveStats save the players stats to a file.
-func (s *stats) saveToFile() {
+func (s *stats) saveToFile(fileName string) {
 	str := fmt.Sprintf("%d,%d,%d", s.won, s.lost, s.draw)
-	err := os.WriteFile(statsFileName, []byte(str), 0666)
+	err := os.WriteFile(fileName, []byte(str), 0666)
 
 	if err != nil {
 		fmt.Println()
@@ -202,8 +202,8 @@ func (s *stats) saveToFile() {
 }
 
 // loadStats load the players stats from a file.
-func (s *stats) loadFromFile() {
-	if bs, err := os.ReadFile(statsFileName); err == nil {
+func (s *stats) loadFromFile(fileName string) {
+	if bs, err := os.ReadFile(fileName); err == nil {
 		if ss := strings.Split(string(bs), ","); len(ss) == 3 {
 			s.won, _ = strconv.Atoi(ss[0])
 			s.lost, _ = strconv.Atoi(ss[1])
