@@ -55,13 +55,22 @@ func TestDidPlayerWon(t *testing.T) {
 }
 
 func TestSaveToFileAndLoadFromFile(t *testing.T) {
-	os.Remove("_statstesting.txt")
-	var ss = stats{123, 456, 789}
-	var sl = stats{0, 0, 0}
-	ss.saveToFile("_statstesting.txt")
-	sl.loadFromFile("_statstesting.txt")
+	defer func() {
+		os.Remove("_statstesting.txt")
+	}()
 
-	if ss.won != sl.won || ss.lost != sl.lost || ss.draw != sl.draw {
+	os.Remove("_statstesting.txt")
+	var pSave = Player{
+		Stats: stats{123, 456, 789},
+	}
+	var pLoad = Player{
+		Stats: stats{0, 0, 0},
+	}
+
+	pSave.SaveToFile("_statstesting.txt")
+	pLoad.LoadFromFile("_statstesting.txt")
+
+	if pSave.Stats.won != pLoad.Stats.won || pSave.Stats.lost != pLoad.Stats.lost || pSave.Stats.draw != pLoad.Stats.draw {
 		t.Error("Expected to load the same stats that were saved to file.")
 	}
 	os.Remove("_statstesting.txt")
