@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -100,7 +101,8 @@ func PlayRound(p *Player, playerDraw int) {
 
 // getComputerDraw gets computer random draw and returns it's value.
 func getComputerDraw() int {
-	return rand.Intn(len(RPS)-1) + 1
+
+	return rand.Intn(len(RPS)*20)%len(RPS) + 1
 }
 
 // didPlayerWon receives player's and computer's draw and returns true if player has won.
@@ -144,7 +146,7 @@ func (p *Player) ResetStats() error {
 	fmt.Println()
 	fmt.Println()
 	fmt.Println("You are about to reset your stats!")
-	fmt.Println("Are you sure (y/n)? ")
+	fmt.Print("Are you sure (y/n)? ")
 
 	ch, err := GetPlayerInput()
 
@@ -160,7 +162,6 @@ func (p *Player) ResetStats() error {
 	} else {
 		fmt.Println()
 		fmt.Println("Action canceled. Stats are kept.")
-
 	}
 
 	return nil
@@ -182,10 +183,22 @@ func (p *Player) LoadFromFile(fileName string) error {
 		return err
 	}
 
-	if ss := strings.Split(string(bs), ","); len(ss) == 3 {
-		p.Stats.won, _ = strconv.Atoi(ss[0])
-		p.Stats.lost, _ = strconv.Atoi(ss[1])
-		p.Stats.draw, _ = strconv.Atoi(ss[2])
+	ss := strings.Split(string(bs), ",")
+
+	if len(ss) != 3 {
+		return errors.New("file isn't in the correct format")
+	}
+
+	if p.Stats.won, err = strconv.Atoi(ss[0]); err != nil {
+		return errors.New("file isn't in the correct format")
+	}
+
+	if p.Stats.lost, err = strconv.Atoi(ss[1]); err != nil {
+		return errors.New("file isn't in the correct format")
+	}
+
+	if p.Stats.draw, err = strconv.Atoi(ss[2]); err != nil {
+		return errors.New("file isn't in the correct format")
 	}
 
 	return nil

@@ -1,14 +1,28 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"testing"
 )
 
 func TestGetComputerDraw(t *testing.T) {
-	i := getComputerDraw()
-	if i < 1 || i > 5 {
-		t.Errorf("Expected computer to draw a number between 1 to 5, but got %d.", i)
+	draws := make([]int, len(RPS))
+
+	for i := 0; i < len(RPS)*1000; i++ {
+		if draw := getComputerDraw(); draw < 1 || draw > len(RPS) {
+			t.Errorf("Excpected computer to draw number between 1 and %d, but recieved %d.", len(RPS), draw)
+		} else {
+			draws[draw-1]++
+		}
+	}
+
+	for i, d := range draws {
+		if d == 0 {
+			t.Errorf("Excpected that computer would succeed to draw the number '%d' (%s) out of %d attempts.", d, RPS[i+1], len(RPS)*1000)
+		} else {
+			fmt.Printf("Computer drew the number '%d' (%s) %d times (%.1f%%)\n", i+1, RPS[i+1], d, float64(d)/float64(len(RPS)*1000)*100)
+		}
 	}
 }
 

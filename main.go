@@ -10,24 +10,39 @@ const statsFileName = "stats.txt"
 
 func main() {
 	var p Player
-	p.LoadFromFile(statsFileName)
+	if err := p.LoadFromFile(statsFileName); err != nil {
+		fmt.Println("Error:", err)
+		Pause()
+	}
 
 	defer func() {
-		p.SaveToFile(statsFileName)
+		if err := p.SaveToFile(statsFileName); err != nil {
+			fmt.Println("Error:", err)
+			Pause()
+		}
 	}()
 
 	for {
 		LoadMenu()
-		ch, _ := GetPlayerInput()
+		ch, err := GetPlayerInput()
+
+		if err != nil {
+			panic(err)
+		}
 
 		switch ch {
 		case 'e', 'E':
-			p.SaveToFile(statsFileName)
+			if err := p.SaveToFile(statsFileName); err != nil {
+				fmt.Println("Error:", err)
+				Pause()
+			}
 			os.Exit(0)
 		case 's', 'S':
 			p.ShowStats()
 		case 'r', 'R':
-			p.ResetStats()
+			if err := p.ResetStats(); err != nil {
+				panic(err)
+			}
 		default:
 			i, err := strconv.Atoi(string(ch))
 
